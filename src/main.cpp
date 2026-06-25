@@ -7,9 +7,15 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  std::cout << "$ ";
 
-  std::string s;
-  std::cin >> s;
-  std::println("{}: command not found", s);
+  
+
+
+  std::string command;
+  for(;;) {
+    std::cout << "$ ";
+    std::getline(std::cin, command);
+    std::println("{}: command not found", command);
+  }
+
 }
