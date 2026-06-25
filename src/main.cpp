@@ -14,8 +14,12 @@ int main() {
   std::string command;
   for(;;) {
     std::cout << "$ ";
-    std::getline(std::cin, command);
+    std::cin >> command;
+    if (command == "exit") {
+      break;
+    }
     std::println("{}: command not found", command);
   }
 
+  return 0;
 }
