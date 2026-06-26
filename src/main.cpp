@@ -129,9 +129,9 @@ void CdHandler(std::vector<std::string>&& args) {
     return;
   }
   auto& path_string = args[1];
+  
   if (path_string[0] == '~') {
-    std::filesystem::current_path(std::getenv("HOME"));
-    path_string[0] = '.';
+    path_string = std::getenv("HOME") + path_string.substr(1);
   }
   fs::path dir(std::move(path_string));
   auto st = fs::status(dir);
