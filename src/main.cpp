@@ -54,29 +54,34 @@ std::string get_arg(std::string_view& tail) {
             continue;
         }
 
-        if (ch == '\\') {
-            escape_char = true;
-
-            continue;
-        }
-
-        if (ch == '\'' && !double_quotes) {
+        if (ch == '\'' && !double_quotes) {  
             single_quotes = !single_quotes;
             continue;
         }
-
-        if(ch == '"' && !single_quotes) {
-            double_quotes = !double_quotes;
+        if (single_quotes) {
+            res += ch;
             continue;
         }
 
-        if (!std::isspace(ch) || single_quotes || double_quotes) {
+        if (ch == '\\') {
+            escape_char = true;
+            continue;
+        }
+        if(ch == '"') {
+            double_quotes = !double_quotes;
+            continue;
+        }
+        if (double_quotes) {
+            res += ch;
+            continue;
+        }
+
+        if (!std::isspace(ch)) {
             res += ch;
             continue;
         } else if (!res.empty()) {
             break;
         }
-
     }
 
     tail.remove_prefix(prefix);
