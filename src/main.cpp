@@ -59,10 +59,10 @@ void TypeHandler(std::istringstream&& stream) {
     return;
   }
   fs::path exec;
-  auto check_exec = [&exec, &name](fs::path&& dir) {
+  auto find_exec = [&exec, &name](fs::path&& dir) {
     dir.append(name);
     auto st = fs::status(dir);
-    if (fs::is_regular_file(st)) {
+    if (!fs::is_regular_file(st)) {
       return false;
     }
 
@@ -76,7 +76,7 @@ void TypeHandler(std::istringstream&& stream) {
     return true;
   };
 
-  process_PATH(check_exec);
+  process_PATH(find_exec);
 
   if (!exec.empty()) {
     std::print("{} is {}", name, exec.c_str());
@@ -106,7 +106,7 @@ void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
     if (pos == var.size()) {
       break;
     }
-    
+
     var.remove_prefix(pos + 1);
   }
 }
