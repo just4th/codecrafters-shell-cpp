@@ -51,12 +51,14 @@ void process_PATH(std::function<bool(std::filesystem::path&&)>);
 void EchoHandler(std::vector<std::string>&&);
 void TypeHandler(std::vector<std::string>&&);
 void PwdHandler(std::vector<std::string>&&);
+void CdHandler(std::vector<std::string>&&);
 
 const std::unordered_map<std::string, const CommandHandler> HANDLERS = {
   {"exit", {}},
   {"echo", EchoHandler},
   {"type", TypeHandler},
-  {"pwd", PwdHandler}
+  {"pwd", PwdHandler},
+  {"cd", CdHandler},
 };
 
 std::filesystem::path find_exec(const std::string_view name) {
@@ -87,12 +89,14 @@ std::filesystem::path find_exec(const std::string_view name) {
 
 void EchoHandler(std::vector<std::string>&& args) {
   if (args.size() < 2) {
+    std::println();
     return;
   }
   std::print("{}", args[1]);
   for (auto it = args.begin() + 2; it != args.end(); ++it) {
     std::print(" {}", *it);
   }
+  std::println();
 }
 
 void TypeHandler(std::vector<std::string>&& args) {
@@ -102,21 +106,39 @@ void TypeHandler(std::vector<std::string>&& args) {
   const auto name = args[1];
 
   if (HANDLERS.contains(name)) {
-    std::print("{} is a shell builtin", name);
+    std::println("{} is a shell builtin", name);
     return;
   }
 
   const auto exec = find_exec(name);
   if (!exec.empty()) {
-    std::print("{} is {}", name, exec.c_str());
+    std::println("{} is {}", name, exec.c_str());
     return;
   }
 
-  std::print("{}: not found", name);
+  std::println("{}: not found", name);
 }
 
 void PwdHandler(std::vector<std::string>&&) {
-  std::print("{}", std::filesystem::current_path().c_str());
+  std::println("{}", std::filesystem::current_path().c_str());
+}
+
+void CdHandler(std::vector<std::string>&& args) {
+  namespace fs = std::filesystem;
+  if (args.size() < 2) {
+    return;
+  }
+  fs::path dir(std::move(args[1]));
+  auto st = fs::status(dir);
+  if (!fs::exists(st)) {
+    std::println("{}: No such file or directory", dir.c_str());
+    return;
+  }
+  if (!fs::is_directory(st)) {
+    std::println("{}: Not a directory", dir.c_str());
+  }
+
+  std::filesystem::current_path(dir);
 }
 
 void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
@@ -172,7 +194,6 @@ int main() {
     auto it = HANDLERS.find(args[0]);
     if (it != HANDLERS.end()) {
       it->second(std::move(args));
-      std::println();
       continue;
     }
 
