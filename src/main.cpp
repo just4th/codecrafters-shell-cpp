@@ -44,9 +44,21 @@ std::string get_arg(std::string_view& tail) {
     std::size_t prefix = 0;
     bool single_quotes = false;
     bool double_quotes = false;
+    bool escape_char = false;
     std::string res;
     for (;prefix < tail.size(); ++prefix) {
         const auto ch = tail[prefix];
+        if (escape_char) {
+            escape_char = false;
+            res += ch;
+            continue;
+        }
+
+        if (ch == '\\') {
+            escape_char = true;
+
+            continue;
+        }
 
         if (ch == '\'' && !double_quotes) {
             single_quotes = !single_quotes;
