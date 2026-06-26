@@ -82,7 +82,7 @@ void TypeHandler(std::istringstream&& stream) {
     std::print("{} is {}", name, exec.c_str());
     return;
   }
-  
+
   std::print("{}: not found", name);
 }
 
@@ -92,6 +92,10 @@ void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
   for(; !var.empty();) {
     auto pos = var.find(PATH_separator());
 
+    if (pos == var.npos) {
+      pos = var.size();
+    }
+
     bool ret = action(
       std::filesystem::path(var.substr(0, pos))
     );
@@ -99,8 +103,11 @@ void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
     if (ret) {
       return;
     }
+    if (pos == var.size()) {
+      break;
+    }
     
-    var.remove_prefix(pos);
+    var.remove_prefix(pos + 1);
   }
 }
 
