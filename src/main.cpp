@@ -116,7 +116,7 @@ void TypeHandler(std::vector<std::string>&& args) {
 }
 
 void PwdHandler(std::vector<std::string>&&) {
-  std::print("{}", std::filesystem::current_path());
+  std::print("{}", std::filesystem::current_path().c_str());
 }
 
 void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
