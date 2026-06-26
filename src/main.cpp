@@ -5,21 +5,51 @@
 #include <map>
 #include <functional>
 #include <filesystem>
+#include <unistd.h>
+#include <sys/wait.h>
 
 
 consteval char PATH_separator() {
-  #ifdef __WIN32
-    return ';';
-  #else
-    return ':';
-  #endif
+#ifdef __WIN32
+  return ';';
+#else
+  return ':';
+#endif
 }
 
-using CommandHandler = std::function<void(std::istringstream&&)>;
+bool execute_command(std::filesystem::path&& exec, std::vector<std::string>&& args) {
+#ifdef __WIN32
+  //TODO
+#else
+  auto pid = fork();
+  if (pid < 0) {
+    return false;
+  } else if (pid > 0) {
+
+    int wstatus;
+    waitpid(pid, &wstatus, 0);
+    std::ignore = wstatus;
+    return true;
+  }
+
+  std::vector<char*> raw_args;
+  raw_args.reserve(args.size() + 1);
+  for (auto& arg : args) {
+    raw_args.push_back(arg.data());
+  }
+  raw_args.push_back(nullptr);
+
+  execv(exec.c_str(), raw_args.data());
+  std::abort();
+
+#endif
+}
+
+using CommandHandler = std::function<void(std::vector<std::string>&&)>;
 
 void process_PATH(std::function<bool(std::filesystem::path&&)>);
-void EchoHandler(std::istringstream&&);
-void TypeHandler(std::istringstream&&);
+void EchoHandler(std::vector<std::string>&&);
+void TypeHandler(std::vector<std::string>&&);
 
 const std::unordered_map<std::string, const CommandHandler> HANDLERS = {
   {"exit", {}},
@@ -27,39 +57,11 @@ const std::unordered_map<std::string, const CommandHandler> HANDLERS = {
   {"type", TypeHandler},
 };
 
-std::vector<std::string> read_args(std::istringstream& stream) {
-  std::vector<std::string> res;
-  std::string arg;
-  while (stream >> arg) {
-    res.push_back(std::move(arg));
-  }
-  return res;
-}
-
-void EchoHandler(std::istringstream&& stream) {
-  const auto args = read_args(stream);
-
-  if (args.empty()) {
-    return;
-  }
-  std::print("{}", args[0]);
-  for (auto it = args.begin() + 1; it != args.end(); ++it) {
-    std::print(" {}", *it);
-  }
-}
-
-void TypeHandler(std::istringstream&& stream) {
+std::filesystem::path find_exec(const std::string_view name) {
   namespace fs = std::filesystem;
 
-  const auto args = read_args(stream);
-  const auto name = args[0];
-
-  if (HANDLERS.contains(name)) {
-    std::print("{} is a shell builtin", name);
-    return;
-  }
-  fs::path exec;
-  auto find_exec = [&exec, &name](fs::path&& dir) {
+  fs::path res;
+  auto impl = [&res, &name](fs::path&& dir) {
     dir.append(name);
     auto st = fs::status(dir);
     if (!fs::is_regular_file(st)) {
@@ -72,12 +74,46 @@ void TypeHandler(std::istringstream&& stream) {
       return false;
     }
 
-    exec = std::move(dir);
+    res = std::move(dir);
     return true;
   };
 
-  process_PATH(find_exec);
+  process_PATH(impl);
 
+  return res;
+}
+
+std::vector<std::string> read_args(std::istringstream& stream) {
+  std::vector<std::string> res;
+  std::string arg;
+  while (stream >> arg) {
+    res.push_back(std::move(arg));
+  }
+  return res;
+}
+
+void EchoHandler(std::vector<std::string>&& args) {
+  if (args.size() < 2) {
+    return;
+  }
+  std::print("{}", args[1]);
+  for (auto it = args.begin() + 2; it != args.end(); ++it) {
+    std::print(" {}", *it);
+  }
+}
+
+void TypeHandler(std::vector<std::string>&& args) {
+  if (args.size() < 2) {
+    return;
+  }
+  const auto name = args[1];
+
+  if (HANDLERS.contains(name)) {
+    std::print("{} is a shell builtin", name);
+    return;
+  }
+
+  const auto exec = find_exec(name);
   if (!exec.empty()) {
     std::print("{} is {}", name, exec.c_str());
     return;
@@ -123,23 +159,33 @@ int main() {
     std::getline(std::cin, command);
     std::istringstream stream(std::move(command));
 
-    std::string name;
-    if (!(stream >> name)) {
+    std::vector<std::string> args;
+    for (std::string arg; stream >> arg;) {
+      args.push_back(std::move(arg));
+    }
+
+    if (args.empty()) {
       continue;
     }
 
-    if (name == "exit") {
+    if (args[0] == "exit") {
       break;
     }
 
-    auto it = HANDLERS.find(name);
-    if (it == HANDLERS.end()) {
-      std::println("{}: command not found", name);
+    auto it = HANDLERS.find(args[0]);
+    if (it != HANDLERS.end()) {
+      it->second(std::move(args));
+      std::println();
       continue;
     }
 
-    it->second(std::move(stream));
-    std::println();
+    auto exec = find_exec(args[0]);
+    if (exec.empty()) {
+      println("{}: command not found", args[0]);
+      continue; 
+    }
+
+    execute_command(std::move(exec), std::move(args));
   }
 
   return 0;
