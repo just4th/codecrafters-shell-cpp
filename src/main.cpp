@@ -67,6 +67,7 @@ std::string get_arg(std::string_view& tail) {
             escape_char = true;
             continue;
         }
+        
         if(ch == '"') {
             double_quotes = !double_quotes;
             continue;
