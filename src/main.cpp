@@ -128,7 +128,12 @@ void CdHandler(std::vector<std::string>&& args) {
   if (args.size() < 2) {
     return;
   }
-  fs::path dir(std::move(args[1]));
+  auto& path_string = args[1];
+  if (path_string[0] == '~') {
+    std::filesystem::current_path(std::getenv("HOME"));
+    path_string[0] = '.';
+  }
+  fs::path dir(std::move(path_string));
   auto st = fs::status(dir);
   if (!fs::exists(st)) {
     std::println("{}: No such file or directory", dir.c_str());
