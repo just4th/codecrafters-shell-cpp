@@ -43,16 +43,22 @@ bool execute_command(std::filesystem::path&& exec, std::vector<std::string>&& ar
 std::string get_arg(std::string_view& tail) {
     std::size_t prefix = 0;
     bool single_quotes = false;
+    bool double_quotes = false;
     std::string res;
     for (;prefix < tail.size(); ++prefix) {
         const auto ch = tail[prefix];
 
-        if (ch == '\'') {
+        if (ch == '\'' && !double_quotes) {
             single_quotes = !single_quotes;
             continue;
         }
 
-        if (!std::isspace(ch) || single_quotes) {
+        if(ch == '"' && !single_quotes) {
+            double_quotes = !double_quotes;
+            continue;
+        }
+
+        if (!std::isspace(ch) || single_quotes || double_quotes) {
             res += ch;
             continue;
         } else if (!res.empty()) {
