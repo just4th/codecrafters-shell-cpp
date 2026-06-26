@@ -50,11 +50,13 @@ using CommandHandler = std::function<void(std::vector<std::string>&&)>;
 void process_PATH(std::function<bool(std::filesystem::path&&)>);
 void EchoHandler(std::vector<std::string>&&);
 void TypeHandler(std::vector<std::string>&&);
+void PwdHandler(std::vector<std::string>&&);
 
 const std::unordered_map<std::string, const CommandHandler> HANDLERS = {
   {"exit", {}},
   {"echo", EchoHandler},
   {"type", TypeHandler},
+  {"pwd", PwdHandler}
 };
 
 std::filesystem::path find_exec(const std::string_view name) {
@@ -80,15 +82,6 @@ std::filesystem::path find_exec(const std::string_view name) {
 
   process_PATH(impl);
 
-  return res;
-}
-
-std::vector<std::string> read_args(std::istringstream& stream) {
-  std::vector<std::string> res;
-  std::string arg;
-  while (stream >> arg) {
-    res.push_back(std::move(arg));
-  }
   return res;
 }
 
@@ -120,6 +113,10 @@ void TypeHandler(std::vector<std::string>&& args) {
   }
 
   std::print("{}: not found", name);
+}
+
+void PwdHandler(std::vector<std::string>&&) {
+  std::print("{}", std::filesystem::current_path());
 }
 
 void process_PATH(std::function<bool(std::filesystem::path&&)> action) {
